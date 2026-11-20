@@ -1,0 +1,22 @@
+{
+  "skills": [
+    {
+      "source": "BagelHole/DevOps-Security-Agent-Skills",
+      "skills": [
+        "podman"
+      ]
+    },
+    {
+      "source": "NousResearch/hermes-agent",
+      "skills": [
+        "opencode"
+      ]
+    },
+    {
+      "source": "vudovn/ag-kit",
+      "skills": [
+        "bash-linux"
+      ]
+    }
+  ]
+}

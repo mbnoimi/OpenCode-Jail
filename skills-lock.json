@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "skills": {
+    "bash-linux": {
+      "source": "vudovn/ag-kit",
+      "commit": "549ba3dc2eb1d40fccb5b6d792eba4101c80cd69",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bash-linux/SKILL.md",
+      "computedHash": "3473cbd662d44827df55d6ab440387f3c66ed396306360b366e2972e14330338"
+    },
+    "opencode": {
+      "source": "NousResearch/hermes-agent",
+      "commit": "f6c3eb1a79ed769d1d4a978ec454dd690166e82d",
+      "sourceType": "github",
+      "skillPath": "optional-skills/autonomous-ai-agents/opencode/SKILL.md",
+      "computedHash": "fea42d18c0d20eb36f5abcf533e786bb2fda24b5dfd2f9d4d41fa3c03f3d807c"
+    },
+    "podman": {
+      "source": "BagelHole/DevOps-Security-Agent-Skills",
+      "commit": "0365f57a079b1332f95cf26e31dd2d5332a8399f",
+      "sourceType": "github",
+      "skillPath": "devops/containers/podman/SKILL.md",
+      "computedHash": "7495b1893fde4bdf8116a95f13b71fc556bce7c6082c947e6e61f13cb4cd540f"
+    }
+  }
+}
