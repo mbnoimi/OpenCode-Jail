@@ -199,6 +199,7 @@ FCC_MODELS_FILE="$FCC_DIR/fcc-models.txt"
 FCC_ALL_MODELS_FILE="$FCC_DIR/fcc-all-models.txt"
 FCC_REFRESH_SCRIPT="$FCC_DIR/.refresh-models.sh"
 FCC_MODEL_COUNT="${FCC_MODEL_COUNT:-50}"
+FCC_ALL_MODEL_COUNT="${FCC_ALL_MODEL_COUNT:-}"
 FCC_REQUEST_TIMEOUT="${FCC_REQUEST_TIMEOUT:-45}"
 FCC_MAX_FALLBACKS="${FCC_MAX_FALLBACKS:-120}"
 FCC_BASE_URL="${FCC_BASE_URL:-http://127.0.0.1:8082}"
@@ -217,7 +218,7 @@ Jail maintenance:
       --update                 Rebuild the image (OpenCode, FCC) and refresh the agents
       --agents-update          Refresh the Agency Agents only
       --fcc-refresh-models        Test $FCC_MODEL_COUNT random models of the local FCC proxy
-      --fcc-refresh-all-models    Test every model the local FCC proxy advertises
+      --fcc-refresh-all-models    Test all models from all providers (random order)
 
 Free Claude Code:
       --fcc                    Launch through Free Claude Code (auto-starts fcc-server)
@@ -236,7 +237,8 @@ Examples:
   opencode-jail --fcc-restart            Apply config changes saved in admin
   opencode-jail --update                 New OpenCode, new Free Claude Code, new agents
   opencode-jail --agents-update          New Agency Agents only
-  opencode-jail --fcc-refresh-models     New fallback list for the proxy
+  opencode-jail --fcc-refresh-models     New fallback list for the proxy (random 50)
+  opencode-jail --fcc-refresh-all-models New fallback list for the proxy (all models, random order)
 
 FCC workflow:
   1. opencode-jail --fcc-admin           First-time setup
@@ -362,6 +364,7 @@ MODELS_FILE="$FCC_DIR/fcc-models.txt"
 ALL_MODELS_FILE="$FCC_DIR/fcc-all-models.txt"
 BASE_URL="${FCC_BASE_URL:-http://127.0.0.1:8082}"
 MODEL_COUNT="${FCC_MODEL_COUNT:-50}"
+ALL_MODEL_COUNT="${FCC_ALL_MODEL_COUNT:-}"
 REQUEST_TIMEOUT="${FCC_REQUEST_TIMEOUT:-45}"
 MAX_FALLBACKS="${FCC_MAX_FALLBACKS:-120}"
 
@@ -510,12 +513,24 @@ if [[ ${#models[@]} -eq 0 ]]; then
   echo "       Is Free Claude Code running? Start it with: opencode-jail --fcc-admin" >&2
   exit 1
 fi
-echo "    -> ${#models[@]} routable model(s)"
+
+# Count unique providers (prefix before first /)
+provider_count=$(printf '%s\n' "${models[@]}" | cut -d'/' -f1 | sort -u | wc -l)
+echo "    -> ${#models[@]} routable model(s) from ${provider_count} provider(s)"
 
 if [[ "$MODE" == "random" ]]; then
   mapfile -t models < <(printf '%s\n' "${models[@]}" | shuf | head -n "$MODEL_COUNT")
   echo "    -> testing ${#models[@]} random model(s)"
   out_file="$MODELS_FILE"
+elif [[ "$MODE" == "all-random" ]]; then
+  if [[ -n "$ALL_MODEL_COUNT" ]]; then
+    mapfile -t models < <(printf '%s\n' "${models[@]}" | shuf | head -n "$ALL_MODEL_COUNT")
+    echo "    -> testing ${#models[@]} random model(s) from all providers (limited to $ALL_MODEL_COUNT)"
+  else
+    mapfile -t models < <(printf '%s\n' "${models[@]}" | shuf)
+    echo "    -> testing all ${#models[@]} model(s) from all providers (random order)"
+  fi
+  out_file="$ALL_MODELS_FILE"
 else
   echo "    -> testing all ${#models[@]} model(s)"
   out_file="$ALL_MODELS_FILE"
@@ -560,6 +575,7 @@ refresh_fcc_models() {
   podman run --rm --network=host --userns=keep-id \
     -e "FCC_BASE_URL=$FCC_BASE_URL" \
     -e "FCC_MODEL_COUNT=$FCC_MODEL_COUNT" \
+    -e "FCC_ALL_MODEL_COUNT=$FCC_ALL_MODEL_COUNT" \
     -e "FCC_REQUEST_TIMEOUT=$FCC_REQUEST_TIMEOUT" \
     -e "FCC_MAX_FALLBACKS=$FCC_MAX_FALLBACKS" \
     -v "$FCC_DIR:/fcc:z" \
@@ -763,7 +779,7 @@ while [[ $# -gt 0 ]]; do
     --fcc-restart) FCC_RESTART=1; shift ;;
     --update)      UPDATE=1; shift ;;
     --agents-update) AGENTS_UPDATE=1; shift ;;
-    --fcc-refresh-models|--fcc-refesh-models) FCC_REFRESH_MODELS=1; shift ;;
+    --fcc-refresh-models) FCC_REFRESH_MODELS=1; shift ;;
     --fcc-refresh-all-models) FCC_REFRESH_ALL_MODELS=1; shift ;;
     -h|--help)     usage 0 ;;
     -*)            echo "ERROR: unknown option: $1" >&2; usage 1 ;;
@@ -790,7 +806,7 @@ if [[ $FCC_REFRESH_MODELS -eq 1 ]]; then
 fi
 
 if [[ $FCC_REFRESH_ALL_MODELS -eq 1 ]]; then
-  refresh_fcc_models all
+  refresh_fcc_models all-random
 fi
 
 if [[ $UPDATE -eq 1 || $AGENTS_UPDATE -eq 1 || $FCC_REFRESH_MODELS -eq 1 || $FCC_REFRESH_ALL_MODELS -eq 1 ]]; then

@@ -6,8 +6,7 @@ This file is the contract; `README.md` is the short user-facing readme.
 
 Repo: `opencode-jail-installer.sh` (installer) plus the launcher it writes.
 Published at <https://github.com/mbnoimi/OpenCode-Jail>. `main` is the only
-branch and holds the Podman architecture; the old Landlock/Landstrip version
-is gone — do not bring it back.
+branch and holds the Podman architecture.
 
 ## The split
 
@@ -75,7 +74,7 @@ only the plugin list and the compaction switch. The container is the boundary.
 | `~/.config/opencode-jail/playwright/` | Playwright browsers |
 | `~/.config/opencode-jail/fcc/.env` | Free Claude Code config (`FCC_OPEN_BROWSER=false`) |
 | `~/.config/opencode-jail/fcc/fcc-models.txt` | models that answered the last random test |
-| `~/.config/opencode-jail/fcc/fcc-all-models.txt` | models that answered the last full test |
+| `~/.config/opencode-jail/fcc/fcc-all-models.txt` | models that answered the last full test (all providers, random order, shows provider count) |
 | `~/.config/opencode-jail/fcc/.refresh-models.sh` | the model test — it runs inside the image |
 | `~/.config/opencode-jail/gitconfig` | git identity, mounted read-only |
 
@@ -113,7 +112,7 @@ exists, copies the seed when there is none, starts `fcc-server` when
 | `--update` | rebuild the image (OpenCode, FCC) and refresh the Agency Agents |
 | `--agents-update` | refresh the Agency Agents only |
 | `--fcc-refresh-models` | test `FCC_MODEL_COUNT` (50) random proxy models, keep the working ones in `fcc-models.txt`, rewrite `MODEL_FALLBACKS` in `fcc/.env` |
-| `--fcc-refresh-all-models` | the same, with every model the proxy advertises (`fcc-all-models.txt`) |
+| `--fcc-refresh-all-models` | test all models from all providers in random order (`fcc-all-models.txt`; limit via `FCC_ALL_MODEL_COUNT`) |
 | `--fcc` | launch through Free Claude Code, starting `fcc-server` when nothing answers on port 8082 yet |
 | `--fcc-admin` | make sure `fcc-server` runs in the container `opencode-jail-fcc-admin`, open the admin UI |
 | `--fcc-restart` | recreate that container so it picks up the config saved in the admin UI |
@@ -121,8 +120,8 @@ exists, copies the seed when there is none, starts `fcc-server` when
 | `-h`, `--help` | usage |
 
 Knobs at the top of the launcher: `OPENCODE_JAIL_IMAGE` (`opencode-jail:latest`),
-`FCC_MODEL_COUNT` (50), `FCC_REQUEST_TIMEOUT` (45), `FCC_MAX_FALLBACKS` (120),
-`FCC_BASE_URL` (`http://127.0.0.1:8082`).
+`FCC_MODEL_COUNT` (50), `FCC_ALL_MODEL_COUNT` (unset = test all), `FCC_REQUEST_TIMEOUT` (45),
+`FCC_MAX_FALLBACKS` (120), `FCC_BASE_URL` (`http://127.0.0.1:8082`).
 
 ### Honest limits
 
@@ -182,10 +181,7 @@ Knobs at the top of the launcher: `OPENCODE_JAIL_IMAGE` (`opencode-jail:latest`)
 - **The config key set must fit OpenCode 2** — its schema is strict, one
   unknown key refuses the whole file. Only `plugins` and `compaction.auto`.
 - **Magic Context needs `compaction.auto = false`** — do not remove it.
-- **No Landstrip/Landlock/Sandbox architecture** — no `opencode-landstrip`
-  plugin, no `~/.config/opencode/sandbox.json`, no
-  `@data-fair/tool-ai-sandbox`, no `ghcr.io/data-fair/tool-ai-sandbox` image.
-  Do not reintroduce or document them.
+
 - **The UID/GID is baked into the image** — after a UID change, rebuild with
   `opencode-jail --update`.
 - **The Agency Agents are not in the image** — host clone, convert, mount.
