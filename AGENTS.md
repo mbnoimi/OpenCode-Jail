@@ -255,8 +255,9 @@ Knobs at the top of the launcher: `OPENCODE_JAIL_IMAGE` (`opencode-jail:latest`)
 ## Workflow
 
 1. Read `README.md` and this file.
-2. Change `opencode-jail-installer.sh`.
-3. `bash -n opencode-jail-installer.sh` (parse only, nothing is executed).
+2. Change `opencode-jail-installer.sh` (or `opencode-jail-uninstaller.sh`).
+3. `bash -n <script>` (parse only, nothing is executed).
 4. Update this file (contract) and the README (behaviour, tech stack).
 5. Tell the user the exact command to run and what to check — the user runs
    it, the agent never does.
+6. **Never `git commit` without explicit user permission.**

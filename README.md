@@ -171,6 +171,35 @@ one the agent may write to.
 The jail registers nothing with your system: no service, no desktop entry.
 It is three things — a launcher, a state directory and a container image.
 
+### Automatic uninstall (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mbnoimi/OpenCode-Jail/main/opencode-jail-uninstaller.sh | bash
+```
+
+This stops/removes the managed `fcc-server` container (`opencode-jail-fcc-admin`),
+any running jail sessions, the image (`opencode-jail:latest`), and the launcher
+(`~/.local/bin/opencode-jail`). The state directory (`~/.config/opencode-jail`)
+is **kept** by default (sessions, credentials, agents, FCC config).
+
+| Option | Effect |
+|--------|--------|
+| `--delete-data` | Also remove `~/.config/opencode-jail` (sessions, auth.json, agents, FCC config, caches) |
+| `--dry-run` | Show what would be done without executing |
+| `-h`, `--help` | Show help |
+
+```bash
+# Also remove the state directory
+curl -fsSL https://raw.githubusercontent.com/mbnoimi/OpenCode-Jail/main/opencode-jail-uninstaller.sh | bash -s -- --delete-data
+
+# Preview what would happen
+curl -fsSL https://raw.githubusercontent.com/mbnoimi/OpenCode-Jail/main/opencode-jail-uninstaller.sh | bash -s -- --dry-run
+```
+
+### Manual uninstall
+
+If you prefer the manual steps:
+
 **1. Stop the proxy and drop the containers**
 
 ```bash
