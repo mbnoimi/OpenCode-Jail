@@ -105,11 +105,18 @@ exists, copies the seed when there is none, starts `fcc-server` when
 `JAIL_START_FCC_SERVER=1` and nothing answers on port 8082 yet, then execs
 `${OPENCODE_BIN}`. The Agency Agents are **not** in the image.
 
+The build is `podman build --pull=always --no-cache`: the install steps are
+`RUN` lines with fixed command lines and OpenCode's auto-update is disabled,
+so a cached build would silently reuse the old OpenCode and FCC. A container
+keeps the image it was created from, so `--update` also recreates a running
+`opencode-jail-fcc-admin`; a running OpenCode session picks up the new image
+when it is started again.
+
 ### Flags
 
 | Flag | Effect |
 |------|--------|
-| `--update` | rebuild the image (OpenCode, FCC) and refresh the Agency Agents |
+| `--update` | rebuild the image (`--pull=always --no-cache`: new base image, OpenCode, FCC), refresh the Agency Agents, recreate a running managed `fcc-server` |
 | `--agents-update` | refresh the Agency Agents only |
 | `--fcc-refresh-models` | test `FCC_MODEL_COUNT` (50) random proxy models, keep the working ones in `fcc-models.txt`, rewrite `MODEL_FALLBACKS` in `fcc/.env` |
 | `--fcc-refresh-all-models` | test all models from all providers in random order (`fcc-all-models.txt`; limit via `FCC_ALL_MODEL_COUNT`) |
@@ -188,6 +195,11 @@ Knobs at the top of the launcher: `OPENCODE_JAIL_IMAGE` (`opencode-jail:latest`)
   An embedded copy cannot be refreshed without a rebuild.
 - **The agent install must not be empty** — `--agents-update` fails when the
   conversion produces no agent file.
+- **`--update` really updates** — the build pulls the base image and bypasses
+  the layer cache (`--pull=always --no-cache`). A cached
+  `RUN curl … | bash` must never pass for a new OpenCode or FCC, and a
+  running managed `fcc-server` is recreated so the proxy does not keep the
+  old image.
 - **A restart must never report a false success** — `--fcc-restart` proves
   a new instance id took the port and errors out when it did not. Same for
   every step that claims something is running.

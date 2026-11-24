@@ -53,8 +53,12 @@ curl -fsSL https://raw.githubusercontent.com/mbnoimi/OpenCode-Jail/main/opencode
 opencode-jail --update
 ```
 
-The first command updates the launcher, the second rebuilds the image (new
-OpenCode, new Free Claude Code) and refreshes the Agency Agents.
+The first command updates the launcher, the second rebuilds the image and
+refreshes the Agency Agents. The rebuild pulls the base image again and
+ignores Podman's build cache (OpenCode and Free Claude Code are installed by
+fixed `RUN` steps, so a cached build would keep the old versions), and a
+running `fcc-server` is recreated on the new image. A running OpenCode
+session keeps its image until you start it again.
 
 ## Use
 
@@ -69,7 +73,7 @@ opencode-jail ~/code/my-app    # a project
 | `--fcc` | run through the local Free Claude Code proxy |
 | `--fcc-admin` | start the proxy and open its admin UI |
 | `--fcc-restart` | apply what you saved in the admin UI |
-| `--update` | new OpenCode, new Free Claude Code, new agents |
+| `--update` | new base image, new OpenCode, new Free Claude Code, new agents |
 | `--agents-update` | new Agency Agents only |
 | `--fcc-refresh-models` | test 50 random models of the proxy, keep the ones that answer |
 | `--fcc-refresh-all-models` | the same, with every model the proxy advertises |

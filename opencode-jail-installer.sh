@@ -215,7 +215,7 @@ Arguments:
   WORKSPACE              Project directory (default: current directory)
 
 Jail maintenance:
-      --update                 Rebuild the image (OpenCode, FCC) and refresh the agents
+      --update                 Rebuild the image (fresh pull, no build cache; OpenCode, FCC) and refresh the agents
       --agents-update          Refresh the Agency Agents only
       --fcc-refresh-models        Test $FCC_MODEL_COUNT random models of the local FCC proxy
       --fcc-refresh-all-models    Test all models from all providers (random order)
@@ -267,14 +267,23 @@ require_image() {
 
 # --- the image ----------------------------------------------------------------
 # The image definition lives in the jail state; the installer writes it.
+#
+# The build must not reuse cached layers: every install step is a RUN with a
+# fixed command line (`curl ... opencode.ai/v2/install`, `uv tool install
+# free-claude-code`), so a cached build silently keeps the old OpenCode and
+# the old FCC. OpenCode's own auto-update is disabled in the image, which
+# makes this build the only update path. `--pull=always` refreshes the base
+# image too; without it Podman only pulls it when it is missing.
 build_image() {
   if [[ ! -f "$JAIL_CONTAINERFILE" ]]; then
     echo "ERROR: $JAIL_CONTAINERFILE is missing." >&2
     echo "       Run the installer again: bash opencode-jail-installer.sh" >&2
     exit 1
   fi
-  echo "==> Building $JAIL_IMAGE (latest OpenCode 2, FCC)"
+  echo "==> Building $JAIL_IMAGE (fresh base image, no build cache)"
   if ! podman build \
+    --pull=always \
+    --no-cache \
     --build-arg "HOST_UID=$(id -u)" \
     --build-arg "HOST_GID=$(id -g)" \
     -t "$JAIL_IMAGE" \
@@ -283,6 +292,11 @@ build_image() {
     echo "ERROR: the image $JAIL_IMAGE could not be built." >&2
     exit 1
   fi
+  local created
+  if created="$(podman image inspect --format '{{.Created}}' "$JAIL_IMAGE" 2>/dev/null)"; then
+    echo "    -> image created: $created"
+  fi
+  return 0
 }
 
 # --- Agency Agents: clone or update the upstream repository and install the
@@ -759,6 +773,36 @@ restart_fcc_server() {
   return 0
 }
 
+# A container keeps the image it was created from, even after the tag points
+# at a new build. After `--update` the managed fcc-server is therefore
+# recreated, so the proxy really runs the new Free Claude Code. A running
+# OpenCode session is left alone: a TUI cannot be moved to a new image, it
+# picks it up the next time it is started.
+refresh_fcc_container() {
+  if fcc_container_exists && fcc_container_running; then
+    echo "==> Recreating $ADMIN_CONTAINER on the new image"
+    if ! stop_fcc_container; then
+      echo "ERROR: the container $ADMIN_CONTAINER could not be stopped; it keeps the old image." >&2
+      echo "       Run: opencode-jail --fcc-restart" >&2
+      return 1
+    fi
+    if ! wait_for_free_port; then
+      echo "ERROR: port $FCC_PORT is still in use; the proxy keeps the old image." >&2
+      echo "       Run: opencode-jail --fcc-restart" >&2
+      return 1
+    fi
+    if ! start_fcc_server; then
+      echo "ERROR: the fcc-server could not be started on the new image." >&2
+      return 1
+    fi
+    echo "[opencode-jail] fcc-server now runs the new image."
+  elif fcc_server_running; then
+    echo "[opencode-jail] a fcc-server outside $ADMIN_CONTAINER still serves :$FCC_PORT"
+    echo "[opencode-jail] it keeps its own image until you run: opencode-jail --fcc-restart"
+  fi
+  return 0
+}
+
 # --- the options --------------------------------------------------------------
 USE_FCC=0
 FCC_ADMIN=0
@@ -793,6 +837,7 @@ ensure_state
 if [[ $UPDATE -eq 1 ]]; then
   build_image
   update_agents
+  refresh_fcc_container
 fi
 
 # --- --agents-update: refresh the Agency Agents only -------------------------
